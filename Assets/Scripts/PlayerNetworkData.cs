@@ -1,0 +1,125 @@
+using TMPro;
+using Unity.Collections;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PlayerNetworkData : NetworkBehaviour
+{
+    [SerializeField] private TMP_Text playerInfoText;
+
+    public NetworkVariable<FixedString64Bytes> PlayerName =
+        new NetworkVariable<FixedString64Bytes>("Player");
+
+    public NetworkVariable<int> Health = new NetworkVariable<int>(100);
+    public NetworkVariable<int> Score = new NetworkVariable<int>(0);
+
+    public override void OnNetworkSpawn()
+    {
+        PlayerName.OnValueChanged += OnNameChanged;
+        Health.OnValueChanged += OnIntValueChanged;
+        Score.OnValueChanged += OnIntValueChanged;
+
+        UpdatePlayerDisplay();
+
+        if (!IsOwner)
+        {
+            return;
+        }
+
+        NetworkGameManager gameManager = FindFirstObjectByType<NetworkGameManager>();
+
+        string requestedName = gameManager.GetPlayerName();
+
+        if (string.IsNullOrWhiteSpace(requestedName))
+        {
+            requestedName = $"Player {OwnerClientId}";
+        }
+            
+        SetPlayerNameRpc(new FixedString64Bytes(requestedName));
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        PlayerName.OnValueChanged -= OnNameChanged;
+        Health.OnValueChanged -= OnIntValueChanged;
+        Score.OnValueChanged -= OnIntValueChanged;
+    }
+
+    private void OnNameChanged(FixedString64Bytes oldValue, FixedString64Bytes newValue)
+    {
+        UpdatePlayerDisplay();
+    }
+
+    private void OnIntValueChanged(int oldValue, int newValue)
+    {
+        UpdatePlayerDisplay();
+    }
+
+    private void UpdatePlayerDisplay()
+    {
+        if (playerInfoText == null)
+        {
+            return;
+        }
+
+        playerInfoText.text = $"{PlayerName.Value}\nHP: {Health.Value}\nScore: {Score.Value}";
+    }
+
+    [Rpc(SendTo.Server)]
+    private void SetPlayerNameRpc(FixedString64Bytes newName)
+    {
+        string value = newName.ToString().Trim();
+
+        if (string.IsNullOrEmpty(value))
+        {
+            value = $"Player {OwnerClientId}";
+        }
+
+        if (value.Length > 16)
+        {
+            value = value.Substring(0, 16);
+        }
+
+        PlayerName.Value = new FixedString64Bytes(value);
+    }
+
+    public void TakeDamage(int damage)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        Health.Value = Mathf.Max(Health.Value - damage, 0);
+    }
+
+    public void AddScore(int amount)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        Score.Value += amount;
+    }
+
+    private void Update()
+    {
+        // Temporary test code for Lab 01 only. 
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (Keyboard.current.hKey.wasPressedThisFrame)
+        {
+            TakeDamage(10);
+        }
+
+        if (Keyboard.current.pKey.wasPressedThisFrame)
+        {
+            AddScore(1);
+        }
+    }
+}
