@@ -5,7 +5,13 @@ public class PlayerController : NetworkBehaviour
 {
 
     [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float aimAngleOffset = -90f;
+
+    [SerializeField] private Transform playerVisual;
     [SerializeField] private GameObject localPlayerMarker;
+
+    private PlayerNetworkData networkData;
+    private Vector2 aimInput;
 
     private PlayerControls controls;
     private Vector3 moveInput;
@@ -15,6 +21,7 @@ public class PlayerController : NetworkBehaviour
     {
         controls = new PlayerControls();
         rb = GetComponent<Rigidbody>();
+        networkData = GetComponent<PlayerNetworkData>();
     }
 
     private void OnEnable()
@@ -35,11 +42,23 @@ public class PlayerController : NetworkBehaviour
         }
 
         moveInput = new Vector3(controls.Player.Move.ReadValue<Vector2>().x, 0f, controls.Player.Move.ReadValue<Vector2>().y);
+        aimInput = controls.Player.Aim.ReadValue<Vector2>();
+
+        float distFromCamera = Mathf.Abs(Camera.main.transform.position.z - transform.position.z);
+        Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(new Vector3(aimInput.x, aimInput.y, distFromCamera));
+
+        Vector3 direction = mouseWorld - transform.position;
+        float angle = Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg + aimAngleOffset;
+
+        playerVisual.localRotation = Quaternion.Euler(0f, angle, 0f);
+        networkData.SetFacingAngleRpc(angle);
 
         if(moveInput.sqrMagnitude > 1f)
         {
             moveInput.Normalize();
         }
+
+        /*
 
         if(moveInput.sqrMagnitude > 0.01f)
         {
@@ -47,6 +66,8 @@ public class PlayerController : NetworkBehaviour
 
             transform.rotation = Quaternion.Euler(0f, angle, 0f);
         }
+
+        */
 
     }
 

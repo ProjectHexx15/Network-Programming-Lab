@@ -7,9 +7,10 @@ using UnityEngine.InputSystem;
 public class PlayerNetworkData : NetworkBehaviour
 {
     [SerializeField] private TMP_Text playerInfoText;
+    [SerializeField] private Transform playerVisual;
 
-    public NetworkVariable<FixedString64Bytes> PlayerName =
-        new NetworkVariable<FixedString64Bytes>("Player");
+    public NetworkVariable<FixedString64Bytes> PlayerName = new NetworkVariable<FixedString64Bytes>("Player");
+    public NetworkVariable<float> FacingAngle = new NetworkVariable<float>(0f);
 
     public NetworkVariable<int> Health = new NetworkVariable<int>(100);
     public NetworkVariable<int> Score = new NetworkVariable<int>(0);
@@ -19,8 +20,10 @@ public class PlayerNetworkData : NetworkBehaviour
         PlayerName.OnValueChanged += OnNameChanged;
         Health.OnValueChanged += OnIntValueChanged;
         Score.OnValueChanged += OnIntValueChanged;
+        FacingAngle.OnValueChanged += OnFacingAngleChanged;
 
         UpdatePlayerDisplay();
+        ApplyFacingAngle(FacingAngle.Value);
 
         if (!IsOwner)
         {
@@ -35,7 +38,7 @@ public class PlayerNetworkData : NetworkBehaviour
         {
             requestedName = $"Player {OwnerClientId}";
         }
-            
+
         SetPlayerNameRpc(new FixedString64Bytes(requestedName));
     }
 
@@ -44,6 +47,7 @@ public class PlayerNetworkData : NetworkBehaviour
         PlayerName.OnValueChanged -= OnNameChanged;
         Health.OnValueChanged -= OnIntValueChanged;
         Score.OnValueChanged -= OnIntValueChanged;
+        FacingAngle.OnValueChanged -= OnFacingAngleChanged;
     }
 
     private void OnNameChanged(FixedString64Bytes oldValue, FixedString64Bytes newValue)
@@ -54,6 +58,16 @@ public class PlayerNetworkData : NetworkBehaviour
     private void OnIntValueChanged(int oldValue, int newValue)
     {
         UpdatePlayerDisplay();
+    }
+
+    private void OnFacingAngleChanged(float oldAngle, float newAngle)
+    {
+        if (IsOwner)
+        {
+            return;
+        }
+
+        ApplyFacingAngle(newAngle);
     }
 
     private void UpdatePlayerDisplay()
@@ -102,6 +116,22 @@ public class PlayerNetworkData : NetworkBehaviour
         }
 
         Score.Value += amount;
+    }
+
+    private void ApplyFacingAngle(float angle)
+    {
+        if(playerVisual == null)
+        {
+            return;
+        }
+
+        playerVisual.localRotation = Quaternion.Euler(0f, 0f, angle);
+    }
+
+    [Rpc(SendTo.Server)]
+    public void SetFacingAngleRpc(float angle)
+    {
+        FacingAngle.Value = angle;
     }
 
     private void Update()
