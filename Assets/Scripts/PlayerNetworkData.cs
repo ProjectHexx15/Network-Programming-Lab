@@ -13,6 +13,8 @@ public class PlayerNetworkData : NetworkBehaviour
     public NetworkVariable<float> FacingAngle = new NetworkVariable<float>(0f);
 
     public NetworkVariable<int> Health = new NetworkVariable<int>(100);
+    public NetworkVariable<bool> IsAlive = new NetworkVariable<bool>(true);
+
     public NetworkVariable<int> Score = new NetworkVariable<int>(0);
 
     public override void OnNetworkSpawn()
@@ -21,6 +23,7 @@ public class PlayerNetworkData : NetworkBehaviour
         Health.OnValueChanged += OnIntValueChanged;
         Score.OnValueChanged += OnIntValueChanged;
         FacingAngle.OnValueChanged += OnFacingAngleChanged;
+        IsAlive.OnValueChanged += OnAliveChanged;
 
         UpdatePlayerDisplay();
         ApplyFacingAngle(FacingAngle.Value);
@@ -48,6 +51,7 @@ public class PlayerNetworkData : NetworkBehaviour
         Health.OnValueChanged -= OnIntValueChanged;
         Score.OnValueChanged -= OnIntValueChanged;
         FacingAngle.OnValueChanged -= OnFacingAngleChanged;
+        IsAlive.OnValueChanged -= OnAliveChanged;
     }
 
     private void OnNameChanged(FixedString64Bytes oldValue, FixedString64Bytes newValue)
@@ -58,6 +62,16 @@ public class PlayerNetworkData : NetworkBehaviour
     private void OnIntValueChanged(int oldValue, int newValue)
     {
         UpdatePlayerDisplay();
+    }
+
+    private void OnAliveChanged(bool previousValue, bool newValue)
+    {
+        UpdatePlayerDisplay();
+
+        if(!newValue)
+        {
+            Debug.Log($"{PlayerName.Value} is now dead on this client.");
+        }
     }
 
     private void OnFacingAngleChanged(float oldAngle, float newAngle)
@@ -77,7 +91,18 @@ public class PlayerNetworkData : NetworkBehaviour
             return;
         }
 
-        playerInfoText.text = $"{PlayerName.Value}\nHP: {Health.Value}\nScore: {Score.Value}";
+        string status = "";
+
+        if (!IsAlive.Value)
+        {
+            status = "\nDead";
+        }
+
+        playerInfoText.text =
+            $"{PlayerName.Value}\n" +
+            $"HP: {Health.Value}\n" +
+            $"Score: {Score.Value}" +
+            status;
     }
 
     [Rpc(SendTo.Server)]
@@ -105,7 +130,19 @@ public class PlayerNetworkData : NetworkBehaviour
             return;
         }
 
+        if(!IsAlive.Value)
+        {
+            return;
+        }
+
         Health.Value = Mathf.Max(Health.Value - damage, 0);
+
+        if (Health.Value == 0)
+        {
+            IsAlive.Value = false;
+
+            Debug.Log($"{PlayerName.Value} has died");
+        }
     }
 
     public void AddScore(int amount)
