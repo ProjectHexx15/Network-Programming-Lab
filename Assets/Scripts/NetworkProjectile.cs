@@ -36,14 +36,14 @@ public class NetworkProjectile : NetworkBehaviour
             return;
         }
 
-        transform.position += transform.up * speed * Time.deltaTime;
+        transform.position += transform.forward * speed * Time.deltaTime;
         if (Time.time >= despawnTime)
         {
             NetworkObject.Despawn();
         }
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerEnter(Collider other)
     {
         if (!IsServer)
         {
@@ -61,5 +61,7 @@ public class NetworkProjectile : NetworkBehaviour
         }
 
         target.TakeDamage(10);
+
+    }
 
 }
