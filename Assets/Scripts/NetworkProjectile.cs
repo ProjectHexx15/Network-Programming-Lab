@@ -43,6 +43,21 @@ public class NetworkProjectile : NetworkBehaviour
         }
     }
 
+    private PlayerNetworkData FindShooter()
+    {
+        if(!NetworkManager.ConnectedClients.TryGetValue(shooterClientId, out NetworkClient client))
+        {
+            return null;
+        }
+
+        if(client.PlayerObject == null)
+        {
+            return null;
+        }
+
+        return client.PlayerObject.GetComponent<PlayerNetworkData>();
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (!IsServer)
@@ -61,6 +76,14 @@ public class NetworkProjectile : NetworkBehaviour
         }
 
         target.TakeDamage(10);
+
+        PlayerNetworkData shooter = FindShooter();
+        if(shooter != null)
+        {
+            shooter.AddScore(1);
+        }
+
+        NetworkObject.Despawn();
 
     }
 
