@@ -10,9 +10,12 @@ public class PlayerWeapon : NetworkBehaviour
     private PlayerControls controls;
     private float nextFireTime;
 
+    private PlayerNetworkData networkData;
+
     private void Awake()
     {
         controls = new PlayerControls();
+        networkData = GetComponent<PlayerNetworkData>();
     }
 
     public override void OnNetworkSpawn()
@@ -35,6 +38,11 @@ public class PlayerWeapon : NetworkBehaviour
             return;
         }
 
+        if(!networkData.IsAlive.Value)
+        {
+            return;
+        }
+
         if(controls.Player.Fire.WasPressedThisFrame())
         {
             RequestFireRpc(firePoint.position, firePoint.rotation);
@@ -44,6 +52,11 @@ public class PlayerWeapon : NetworkBehaviour
     [Rpc(SendTo.Server)]
     private void RequestFireRpc(Vector3 spawnPostiion, Quaternion spawnRotation)
     {
+        if(!networkData.IsAlive.Value)
+        {
+            return;
+        }
+
         if(Time.time < nextFireTime)
         {
             return;

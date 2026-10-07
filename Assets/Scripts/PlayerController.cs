@@ -41,6 +41,12 @@ public class PlayerController : NetworkBehaviour
             return;
         }
 
+        if (!networkData.IsAlive.Value)
+        {
+            moveInput = Vector2.zero;
+            return;
+        }
+
         moveInput = new Vector3(controls.Player.Move.ReadValue<Vector2>().x, 0f, controls.Player.Move.ReadValue<Vector2>().y);
         aimInput = controls.Player.Aim.ReadValue<Vector2>();
 
@@ -74,6 +80,11 @@ public class PlayerController : NetworkBehaviour
     private void FixedUpdate()
     {
         if (!IsOwner)
+        {
+            return;
+        }
+
+        if(!networkData.IsAlive.Value)
         {
             return;
         }

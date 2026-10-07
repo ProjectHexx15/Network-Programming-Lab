@@ -26,6 +26,7 @@ public class PlayerNetworkData : NetworkBehaviour
         IsAlive.OnValueChanged += OnAliveChanged;
 
         UpdatePlayerDisplay();
+        UpdateAliveDisplay();
         ApplyFacingAngle(FacingAngle.Value);
 
         if (!IsOwner)
@@ -67,6 +68,7 @@ public class PlayerNetworkData : NetworkBehaviour
     private void OnAliveChanged(bool previousValue, bool newValue)
     {
         UpdatePlayerDisplay();
+        UpdateAliveDisplay();
 
         if(!newValue)
         {
@@ -163,6 +165,14 @@ public class PlayerNetworkData : NetworkBehaviour
         }
 
         playerVisual.localRotation = Quaternion.Euler(0f, 0f, angle);
+    }
+
+    private void UpdateAliveDisplay()
+    {
+        if(playerVisual != null)
+        {
+            playerVisual.gameObject.SetActive(IsAlive.Value);
+        }
     }
 
     [Rpc(SendTo.Server)]
